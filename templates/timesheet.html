@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Timesheet Studio — ChronoPulse{% endblock %}
+{% block page_id %}timesheet{% endblock %}
+
+{% block content %}
+
+<div class="page-head no-print">
+  <div>
+    <div class="eyebrow"><span class="eyebrow-line"></span> CLIENT BILLING / EXPORT STUDIO</div>
+    <h1>Timesheet <span>Studio</span></h1>
+    <p>Filter. Preview. Export. Print a client-ready statement in one click.</p>
+  </div>
+  <div class="page-head-actions">
+    <a class="btn btn-ghost" id="csvBtn"
+       href="{{ url_for('export_csv') }}?from={{ query['from'] }}&to={{ query['to'] }}&project={{ query.project }}&billable={{ query.billable }}">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#10B981" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+      Download CSV
+    </a>
+    <a class="btn btn-log" id="pdfBtn"
+       href="{{ url_for('timesheet', **{'from': query['from']}) }}">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6zM9 17h6"/></svg>
+      Print / Save PDF
+    </a>
+  </div>
+</div>
+
+<!-- ============ INVOICE HEADER ============ -->
+<div class="invoice-head">
+  <img class="invoice-logo" src="{{ url_for('static', filename='assets/logo-chronopulse.svg') }}" alt="ChronoPulse" width="200" height="42">
+  <div class="invoice-title">
+    <span class="kicker">STATEMENT OF WORK HOURS</span>
+    <h2>Client Timesheet</h2>
+    <p>{% if clients %}Prepared for <strong>{{ clients|join(', ') }}</strong>{% else %}No sessions in this range{% endif %}</p>
+  </div>
+  <div class="invoice-meta">
+    <span>INVOICE REF</span><strong>{{ invoice_no }}</strong>
+    <span>ISSUED</span><strong>{{ issued_on }}</strong>
+    <span>PERIOD</span><strong>{{ query['from'] }} → {{ query['to'] }}</strong>
+  </div>
+</div>
+
+<!-- ============ FILTERS ============ -->
+<form class="filter-bar panel no-print" method="get" action="{{ url_for('timesheet') }}">
+  <label><span>FROM DATE</span><input type="date" name="from" value="{{ query['from'] }}" required></label>
+  <label><span>TO DATE</span><input type="date" name="to" value="{{ query['to'] }}" required></label>
+  <label><span>PROJECT</span>
+    <select name="project">
+      <option value="0">All projects</option>
+      {% for project in projects %}
+        <option value="{{ project.id }}" {{ 'selected' if query.project == project.id }}>{{ project.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label><span>BILLING</span>
+    <select name="billable">
+      <option value="all" {{ 'selected' if query.billable == 'all' }}>All sessions</option>
+      <option value="billable" {{ 'selected' if query.billable == 'billable' }}>Billable only</option>
+      <option value="non-billable" {{ 'selected' if query.billable == 'non-billable' }}>Non-billable only</option>
+    </select>
+  </label>
+  <button class="btn btn-engage" type="submit">Apply Filters</button>
+</form>
+
+<!-- ============ SUMMARY ============ -->
+<section class="summary-grid no-print">
+  <article class="panel summary-card"><span>TOTAL HOURS</span><strong>{{ '%.2f'|format(total_hours) }}<small>h</small></strong><i>▁▃▅▇█</i></article>
+  <article class="panel summary-card"><span>BILLABLE AMOUNT</span><strong class="earnings">₹{{ '{:,.2f}'.format(total_earnings) }}</strong><i>▁▂▄▆█</i></article>
+  <article class="panel summary-card"><span>SESSIONS</span><strong>{{ session_count }}</strong><i>▂▄▆▄▂</i></article>
+  <article class="panel summary-card"><span>AVG. BILLABLE RATE</span><strong>₹{{ '{:,.0f}'.format(avg_hourly) }}<small>/h</small></strong><i>▃▅▇▅▃</i></article>
+</section>
+
+<!-- ============ TIMESHEET TABLE ============ -->
+<section class="panel timesheet-panel">
+  <header class="panel-head no-print">
+    <div><span class="kicker">TIME LEDGER</span><h2>Session breakdown</h2></div>
+    <span class="ledger-count">{{ session_count }} entries · {{ '%.2f'|format(total_hours) }} hours</span>
+  </header>
+
+  <div class="table-scroll">
+    <table class="data-table timesheet-table">
+      <thead>
+        <tr>
+          <th>DATE</th><th>PROJECT / CLIENT</th><th>TASK DESCRIPTION</th>
+          <th>TIME</th><th>HOURS</th><th>BILLABLE</th><th>RATE</th><th>EARNINGS</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for group in logs|groupby('log_date') %}
+          <tr class="group-row">
+            <td colspan="8">
+              <span class="group-date">{{ group.grouper }}</span>
+              <span>{{ group.list|length }} session{{ 's' if group.list|length != 1 }} · {{ '%.2f'|format(group.list|sum(attribute='hours')) }}h</span>
+            </td>
+          </tr>
+          {% for log in group.list %}
+          <tr>
+            <td class="cell-date">{{ log.log_date }}</td>
+            <td>
+              <span class="project-dot" style="--dot:{{ log.color_tag }}"></span>
+              <strong>{{ log.project_name }}</strong>
+              <small>{{ log.client_name }}</small>
+            </td>
+            <td class="cell-task">{{ log.task_description }}</td>
+            <td class="mono">{{ log.start_time or '—' }}–{{ log.end_time or '—' }}</td>
+            <td class="mono">{{ '%.2f'|format(log.hours) }}</td>
+            <td><span class="badge {{ 'badge-yes' if log.billable else 'badge-no' }}">{{ 'YES' if log.billable else 'NO' }}</span></td>
+            <td class="mono">₹{{ '{:,.0f}'.format(log.hourly_rate) }}</td>
+            <td class="mono earnings">₹{{ '{:,.2f}'.format(log.earnings) }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="8" class="empty-cell">No work sessions found for this filter. Try a wider date range.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4">GRAND TOTAL</td>
+          <td class="mono">{{ '%.2f'|format(total_hours) }}h</td>
+          <td>{{ session_count }} sessions</td>
+          <td>—</td>
+          <td class="mono earnings">₹{{ '{:,.2f}'.format(total_earnings) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="timesheet-footer">
+    <div class="signature-block">
+      <svg viewBox="0 0 220 48" fill="none" aria-hidden="true"><path d="M4 32c16-26 26 12 40-10s21 20 36-5 24 18 38-3 26 15 40-5 22 10 38-9" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round"/></svg>
+      <div class="signature-rule"></div>
+      <strong>{{ dev.name }}</strong>
+      <span>{{ dev.role }} · Verified &amp; Engineered by {{ dev.name }}</span>
+      <small>{{ dev.email }} · {{ dev.phone }} · {{ dev.github }}</small>
+    </div>
+    <div class="print-stamp">
+      <span>GENERATED BY</span>
+      <strong>CHRONOPULSE</strong>
+      <small>Precision Work-Hour Tracker</small>
+    </div>
+  </div>
+</section>
+
+<p class="export-hint no-print">💡 Use <strong>Print / Save PDF</strong> and choose “Save as PDF” in your browser dialog for a clean, A4-ready client timesheet.</p>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const pdfBtn = document.getElementById('pdfBtn');
+  if (pdfBtn) {
+    pdfBtn.addEventListener('click', function () {
+      const params = new URLSearchParams(window.location.search);
+      params.set('from', '{{ query["from"] }}');
+      params.set('to', '{{ query["to"] }}');
+      params.set('project', '{{ query.project }}');
+      params.set('billable', '{{ query.billable }}');
+      this.href = '/timesheet/print?' + params.toString();
+    });
+  }
+</script>
+{% endblock %}
