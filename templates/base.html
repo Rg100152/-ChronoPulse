@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07090E">
+  <meta name="description" content="ChronoPulse — precision work-hour tracker and automated client timesheet studio by Raj Gautam.">
+  <title>{% block title %}ChronoPulse — Precision Time Studio{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('favicon') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/chronopulse.css') }}">
+</head>
+<body data-page="{% block page_id %}dashboard{% endblock %}" data-print="{{ '1' if print_mode|default(false) else '0' }}">
+  <div class="grid-backdrop" aria-hidden="true"></div>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="nav-inner">
+      <a class="brand" href="{{ url_for('index') }}" aria-label="ChronoPulse home">
+        <img src="{{ url_for('static', filename='assets/logo-chronopulse.svg') }}" alt="ChronoPulse" width="200" height="42">
+      </a>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a href="{{ url_for('index') }}" class="{{ 'active' if request.path == '/' else '' }}">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg>
+          Dashboard
+        </a>
+        <a href="{{ url_for('timesheet') }}" class="{{ 'active' if request.path.startswith('/timesheet') else '' }}">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+          Timesheet
+        </a>
+      </nav>
+
+      <button type="button" class="dev-pill" id="devPillBtn" aria-haspopup="dialog">
+        <span class="dev-pulse"></span>
+        <span class="dev-emoji">👨‍💻</span>
+        <span>Dev: <strong>{{ dev.name }}</strong></span>
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="page-shell {{ 'printable-shell' if print_mode|default(false) else 'no-print' }}">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer no-print">
+    <div class="footer-card">
+      <div class="footer-avatar-wrap">
+        <img src="{{ url_for('static', filename='assets/avatar.jpg') }}" alt="Raj Gautam" class="footer-avatar">
+        <span class="footer-verified-dot">✓</span>
+      </div>
+      <div class="footer-identity">
+        <span class="footer-kicker">VERIFIED &amp; ENGINEERED BY</span>
+        <h3>{{ dev.name }}</h3>
+        <p>{{ dev.role }} · Creator of ChronoPulse</p>
+      </div>
+      <div class="footer-links">
+        <a href="mailto:{{ dev.email }}">{{ dev.email }}</a>
+        <a href="tel:9555785729">{{ dev.phone }}</a>
+        <a href="{{ dev.instagram_url }}" target="_blank" rel="noopener">{{ dev.instagram }}</a>
+        <a href="{{ dev.github }}" target="_blank" rel="noopener">GitHub ↗</a>
+      </div>
+      <svg class="footer-pulse" viewBox="0 0 180 40" fill="none" aria-hidden="true">
+        <path d="M0 20h42l8-12 10 24 10-32 12 40 10-20h20l7-8 7 8h54" stroke="#F59E0B" stroke-opacity="0.65" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 ChronoPulse · Track Every Minute, Bill Every Hour.</span>
+      <span>Built with Flask · SQLite · Swiss Precision UI</span>
+    </div>
+  </footer>
+
+  <dialog class="modal dev-modal" id="devModal" aria-labelledby="devModalTitle">
+    <div class="dev-modal-banner"></div>
+    <div class="modal-body">
+      <button type="button" class="modal-close" data-close-dialog aria-label="Close">×</button>
+      <img src="{{ url_for('static', filename='assets/avatar.jpg') }}" alt="Raj Gautam" class="dev-modal-avatar">
+      <span class="kicker">DEVELOPER IDENTITY</span>
+      <h2 id="devModalTitle">{{ dev.name }}</h2>
+      <p class="dev-modal-role">{{ dev.role }} — building precise, beautiful tools for the web.</p>
+      <div class="dev-info-grid">
+        <a href="mailto:{{ dev.email }}"><span>EMAIL</span><strong>{{ dev.email }}</strong></a>
+        <a href="tel:9555785729"><span>CONTACT</span><strong>{{ dev.phone }}</strong></a>
+        <a href="{{ dev.instagram_url }}" target="_blank" rel="noopener"><span>INSTAGRAM</span><strong>{{ dev.instagram }}</strong></a>
+        <a href="{{ dev.github }}" target="_blank" rel="noopener"><span>GITHUB</span><strong>Rg100152 ↗</strong></a>
+      </div>
+      <div class="dev-modal-sign">
+        <svg viewBox="0 0 200 44" fill="none" aria-hidden="true"><path d="M4 28c14-22 22 10 34-8s18 16 30-4 20 14 32-2 22 12 34-4 20 8 32-6" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Verified &amp; Engineered by {{ dev.name }}</span>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+  <script src="{{ url_for('static', filename='js/chronograph.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
